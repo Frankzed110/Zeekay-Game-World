@@ -1,4 +1,5 @@
 /**
+declare const process: { exit(code: number): never };
  * Headless engine simulation: an aim-bot plays every mission and we assert each is winnable
  * and the core systems (wind, ragdolls, cages, barrels, scoring, stars) behave.
  * Run: yarn test:engine
