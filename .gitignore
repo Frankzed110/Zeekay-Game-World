@@ -1,0 +1,13 @@
+node_modules/
+.expo/
+dist/
+web-build/
+*.log
+.env
+__pycache__/
+.pytest_cache/
+*.pyc
+frontend/public/canvaskit.wasm
+frontend/ios/
+frontend/android/
+.DS_Store
