@@ -37,6 +37,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
+    "tsx": "^4",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -46,7 +47,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "postinstall": "node scripts/copy-canvaskit.js"
+    "postinstall": "node scripts/copy-canvaskit.js",
+    "test:engine": "tsx tests/engine-sim.ts"
   },
   "private": true
 }
