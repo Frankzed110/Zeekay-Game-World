@@ -6,7 +6,7 @@
 // rendering through Skia on iOS, Android and web (CanvasKit). Layer order follows §12.
 
 import { Canvas, Picture, Skia, createPicture, BlurStyle, PaintStyle, StrokeCap, TileMode } from "@shopify/react-native-skia";
-import type { SkCanvas, SkColor, SkFont, SkPaint, SkPath, SkPicture } from "@shopify/react-native-skia";
+import type { SkCanvas, SkColor, SkFont, SkMaskFilter, SkPaint, SkPath, SkPicture } from "@shopify/react-native-skia";
 import React from "react";
 import type { StyleProp, ViewStyle } from "react-native";
 
@@ -92,9 +92,15 @@ function colorAlpha(c: string): number {
   }
   return a;
 }
+const blurCache = new Map<number, SkMaskFilter>();
 function glow(c: string, sigma: number, alpha = 1): SkPaint {
   const p = fill(c, alpha);
-  p.setMaskFilter(Skia.MaskFilter.MakeBlur(BlurStyle.Normal, sigma, true));
+  let mf = blurCache.get(sigma);
+  if (!mf) {
+    mf = Skia.MaskFilter.MakeBlur(BlurStyle.Normal, sigma, true);
+    blurCache.set(sigma, mf);
+  }
+  p.setMaskFilter(mf);
   return p;
 }
 const rect = (x: number, y: number, w: number, h: number) => Skia.XYWHRect(x, y, w, h);

@@ -215,6 +215,8 @@ export class Engine {
   freedAllBeforeKill = false;
   goldFound = 0;
   bellsRung = 0;
+  /** Open player volleys: a release counts as a miss only if none of its arrows connect. */
+  volleys = new Map<number, { left: number; hit: boolean }>();
   dummiesBroken = 0;
 
   // Waves
@@ -664,6 +666,8 @@ export class Engine {
       dmg *= 1.8;
       this.powershotArmed = false;
     }
+    const volley = nid();
+    this.volleys.set(volley, { left: count, hit: false });
     for (let i = 0; i < count; i++) {
       const off = count === 1 ? 0 : (i - (count - 1) / 2) * 0.07;
       const a = a0 + off;
@@ -689,6 +693,7 @@ export class Engine {
         power,
         scored: false,
         windMul: 1 - lo.windResist,
+        volley,
       });
     }
     this.shots += count;
@@ -735,6 +740,7 @@ export class Engine {
         power: false,
         scored: false,
         windMul: opts.kind === "orb" ? 0.6 : 1,
+        volley: 0,
       });
     }
   }
@@ -1582,26 +1588,43 @@ export class Engine {
     if (this.arrows.length > 120) this.arrows = this.arrows.filter((a) => a.alive);
   }
 
+  /** Close one arrow of a volley; when the whole volley is resolved, judge hit vs miss. */
+  private settleVolley(a: Arrow, hit: boolean) {
+    const v = this.volleys.get(a.volley);
+    if (!v) return;
+    v.left -= 1;
+    if (hit) {
+      if (!v.hit) {
+        this.streak += 1;
+        this.bestStreak = Math.max(this.bestStreak, this.streak);
+        if (this.streak >= 3) {
+          const bonus = Math.min(100, this.streak * 10);
+          this.streakBonus += bonus;
+          if (this.streak % 3 === 0) this.floatText(this.player.x, this.player.y - this.player.h - 40, `STREAK ×${this.streak}`, "#E3B341", false);
+        }
+      }
+      v.hit = true;
+    }
+    if (v.left <= 0) {
+      if (!v.hit) {
+        this.misses += 1;
+        this.streak = 0;
+      }
+      this.volleys.delete(a.volley);
+    }
+  }
+
   private resolveMiss(a: Arrow) {
     if (!a.isPlayer || a.scored) return;
     a.scored = true;
-    if (a.hitIds.length === 0) {
-      this.misses += 1;
-      this.streak = 0;
-    }
+    this.settleVolley(a, a.hitIds.length > 0);
   }
 
   private scorePlayerHit(a: Arrow) {
     if (a.scored) return;
     a.scored = true;
     this.hits += 1;
-    this.streak += 1;
-    this.bestStreak = Math.max(this.bestStreak, this.streak);
-    if (this.streak >= 3) {
-      const bonus = Math.min(100, this.streak * 10);
-      this.streakBonus += bonus;
-      if (this.streak % 3 === 0) this.floatText(this.player.x, this.player.y - this.player.h - 40, `STREAK ×${this.streak}`, "#E3B341", false);
-    }
+    this.settleVolley(a, true);
   }
 
   private collideArrow(a: Arrow, x0: number, y0: number) {
@@ -1629,10 +1652,15 @@ export class Engine {
           a.vy = -200;
           a.hitIds.push(f.id);
           a.alive = false;
-          if (a.isPlayer) {
+          if (a.isPlayer && !a.scored) {
             a.scored = true;
+            this.hits += 1; // contact, not a miss — but it breaks the streak
             this.streak = 0;
-            this.hits += 1; // contact, not a miss
+            const v = this.volleys.get(a.volley);
+            if (v) {
+              v.hit = true;
+              this.settleVolley(a, false);
+            }
           }
           return;
         }
@@ -1687,9 +1715,10 @@ export class Engine {
         if (t < 0) continue;
         a.hitIds.push(h.id);
         this.damageHostage(h, Math.min(a.damage * (a.isPlayer ? 0.5 : 1), h.maxHp * 0.45));
-        if (a.isPlayer) {
+        if (a.isPlayer && !a.scored) {
           a.scored = true;
           this.streak = 0;
+          this.settleVolley(a, false);
         }
         a.alive = false;
         return;
@@ -1832,7 +1861,7 @@ export class Engine {
     if (tg.kind === "rain") {
       for (let i = 0; i < 5; i++) {
         const x = tg.x + (this.rng() - 0.5) * tg.w;
-        this.arrows.push({ id: nid(), ownerId: -1, team: tg.team === -1 ? 1 : tg.team, kind: "rain", x: x - 60, y: -40 - this.rng() * 120, vx: 60, vy: 900, element: "normal", damage: tg.dmg, pierce: 0, hitIds: [], trail: [], alive: true, stuck: 0, age: 0, fromX: x, isPlayer: false, power: false, scored: false, windMul: 0.2 });
+        this.arrows.push({ id: nid(), ownerId: -1, team: tg.team === -1 ? 1 : tg.team, kind: "rain", x: x - 60, y: -40 - this.rng() * 120, vx: 60, vy: 900, element: "normal", damage: tg.dmg, pierce: 0, hitIds: [], trail: [], alive: true, stuck: 0, age: 0, fromX: x, isPlayer: false, power: false, scored: false, windMul: 0.2, volley: 0 });
       }
       return;
     }

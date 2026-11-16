@@ -233,6 +233,8 @@ export interface Arrow {
   power: boolean;
   scored: boolean; // player arrow already counted as hit
   windMul: number;
+  /** Player volley id (multishot arrows share one); 0 for non-player arrows. */
+  volley: number;
 }
 
 export interface Hostage {

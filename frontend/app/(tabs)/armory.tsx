@@ -64,13 +64,16 @@ export default function ArmoryScreen() {
   const lo = loadoutFromSave(save);
   const p = save.profile;
 
-  const spend = (cost: Cost, apply: (d: SaveData) => void, msg: string) => {
+  const spend = (cost: Cost, apply: (d: SaveData) => void, msg: string, itemId: string) => {
     const chk = canAfford(cost, p.gold, save.inventory.materials, p.level);
     if (!chk.ok) {
       toast(chk.reason ?? "Can't afford", "error");
       return;
     }
     update((d) => {
+      // Re-check against the latest save so a double tap can't buy twice or overdraw.
+      if (d.inventory.bows.includes(itemId) || d.inventory.armors.includes(itemId)) return;
+      if (!canAfford(cost, d.profile.gold, d.inventory.materials, d.profile.level).ok) return;
       d.profile.gold -= cost.gold;
       for (const [m, n] of Object.entries(cost.materials ?? {})) d.inventory.materials[m as keyof typeof d.inventory.materials] -= n ?? 0;
       apply(d);
@@ -113,7 +116,7 @@ export default function ArmoryScreen() {
           ) : owned ? (
             <Button variant="secondary" label="Equip" testID={`armory-bow-${b.id}-equip`} onPress={() => update((d) => void (d.equipped.bow = b.id))} />
           ) : b.source === "shop" ? (
-            <Button label={`Buy ${b.cost.gold}g`} testID={`armory-bow-${b.id}-buy`} onPress={() => spend(b.cost, (d) => void d.inventory.bows.push(b.id), `${b.name} acquired`)} />
+            <Button label={`Buy ${b.cost.gold}g`} testID={`armory-bow-${b.id}-buy`} onPress={() => spend(b.cost, (d) => void d.inventory.bows.push(b.id), `${b.name} acquired`, b.id)} />
           ) : (
             <Caption>Craft in the forge</Caption>
           )}
@@ -145,7 +148,7 @@ export default function ArmoryScreen() {
           ) : owned ? (
             <Button variant="secondary" label="Equip" testID={`armory-armor-${a.id}-equip`} onPress={() => update((d) => void (d.equipped.armor = a.id))} />
           ) : a.source === "shop" ? (
-            <Button label={`Buy ${a.cost.gold}g`} testID={`armory-armor-${a.id}-buy`} onPress={() => spend(a.cost, (d) => void d.inventory.armors.push(a.id), `${a.name} acquired`)} />
+            <Button label={`Buy ${a.cost.gold}g`} testID={`armory-armor-${a.id}-buy`} onPress={() => spend(a.cost, (d) => void d.inventory.armors.push(a.id), `${a.name} acquired`, a.id)} />
           ) : (
             <Caption>Craft in the forge</Caption>
           )}
@@ -309,6 +312,7 @@ export default function ArmoryScreen() {
                             d.inventory.crafted.push(item.id);
                           },
                           `${item.name} forged!`,
+                          item.id,
                         )
                       }
                     />

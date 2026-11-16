@@ -59,7 +59,13 @@ export function CombatCanvas({
       last = ts;
       if (!pausedRef.current) {
         onFrameRef.current?.(dt);
-        engine.update(dt);
+        // Catch up in ≤33 ms steps so slow devices don't play in slow motion (cap 100 ms/frame).
+        let remaining = Math.min(dt, 0.1);
+        while (remaining > 1e-4) {
+          const step = Math.min(remaining, 0.033);
+          engine.update(step);
+          remaining -= step;
+        }
         for (const ev of engine.drainEvents()) audio.playEvent(ev.type);
       }
       setPic(renderFrame(engine, view, { trajectorySteps, fonts: fontsRef.current }));
