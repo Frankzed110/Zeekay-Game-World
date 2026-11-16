@@ -27,7 +27,8 @@ export interface View {
 }
 
 export function computeView(W: number, H: number): View {
-  const scale = Math.max(0.1, Math.min(W / 1100, H / 1000));
+  // Portrait phones get a closer camera (900 world units wide) so fighters stay readable.
+  const scale = Math.max(0.1, Math.min(W / (H > W ? 900 : 1100), H / 1000));
   const visibleW = W / scale;
   const visibleH = H / scale;
   // Keep a band below the ground for on-screen controls (pads / ability buttons) so they

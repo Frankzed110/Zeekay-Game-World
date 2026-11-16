@@ -6,7 +6,7 @@
 import type { SkFont, SkPicture } from "@shopify/react-native-skia";
 import { BlurView } from "expo-blur";
 import React, { useEffect, useRef, useState } from "react";
-import { Platform, Pressable, ScrollView, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { Platform, Pressable, ScrollView, Text, useWindowDimensions, View, type StyleProp, type ViewStyle } from "react-native";
 import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -236,11 +236,15 @@ export function CombatHud({
   const windDir = hud.wind >= 0 ? 1 : -1;
   const L = Math.max(insets.left, space.md);
   const R = Math.max(insets.right, space.md);
+  const { width: winW } = useWindowDimensions();
+  const narrow = winW < 640; // phone portrait: stack wind under score, 2×2 ability grid
+  const panelW = narrow ? Math.min(200, winW * 0.5) : 230;
+  const abilitySize = narrow ? 50 : 56;
 
   return (
     <>
       {/* Top-left: HP, objective */}
-      <View pointerEvents="box-none" style={{ position: "absolute", top: insets.top + space.sm, left: L, width: 230, gap: space.sm }}>
+      <View pointerEvents="box-none" style={{ position: "absolute", top: insets.top + space.sm, left: L, width: panelW, gap: space.sm }}>
         <Glass testID="combat-hp">
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <Text style={t}>HP</Text>
@@ -280,8 +284,8 @@ export function CombatHud({
       </View>
 
       {/* Top-center: wind + boss */}
-      <View pointerEvents="none" style={{ position: "absolute", top: insets.top + space.sm, left: 0, right: 0, alignItems: "center", gap: space.sm }}>
-        <Glass testID="combat-wind-indicator" style={{ minWidth: 150 }}>
+      <View pointerEvents="none" style={narrow ? { position: "absolute", top: insets.top + 124, right: R, alignItems: "flex-end", gap: space.sm, maxWidth: winW - panelW - L - R - space.sm } : { position: "absolute", top: insets.top + space.sm, left: 0, right: 0, alignItems: "center", gap: space.sm }}>
+        <Glass testID="combat-wind-indicator" style={{ minWidth: narrow ? 120 : 150 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
             <Icon name="weather-windy" size={16} color="#BFE6FF" />
             <Text style={[t, { fontFamily: fonts.display }]}>
@@ -297,7 +301,7 @@ export function CombatHud({
           </View>
         </Glass>
         {hud.boss ? (
-          <Glass testID="combat-boss-bar" style={{ width: 340, maxWidth: "70%" }}>
+          <Glass testID="combat-boss-bar" style={{ width: narrow ? 170 : 340, maxWidth: narrow ? undefined : "70%" }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Text style={[t, { fontFamily: fonts.displayHeavy, fontSize: 13, letterSpacing: 1 }]}>{hud.boss.name}</Text>
               <View style={{ flexDirection: "row", gap: 4 }}>
@@ -349,7 +353,7 @@ export function CombatHud({
             );
           })}
         </ScrollView>
-        <View style={{ flexDirection: "row", gap: 8 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: 8, width: narrow ? abilitySize * 2 + 8 : undefined }}>
           {hud.abilities.map((a, i) => {
             const ready = a.cd <= 0;
             const def = ABILITIES[a.id];
@@ -360,9 +364,9 @@ export function CombatHud({
                 label={`${def.name}${ready ? "" : `, ${Math.ceil(a.cd)} seconds`}`}
                 onDown={() => engine.useAbility(i)}
                 style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 28,
+                  width: abilitySize,
+                  height: abilitySize,
+                  borderRadius: abilitySize / 2,
                   alignItems: "center",
                   justifyContent: "center",
                   backgroundColor: a.armed || a.active ? colors.brandSecondary : ready ? "rgba(224,90,54,0.85)" : "rgba(18,19,24,0.7)",
