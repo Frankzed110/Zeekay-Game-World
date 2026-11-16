@@ -83,6 +83,14 @@ cd backend && python -m pytest -q tests
 ```
 
 ```bash
+backend/scripts/smoke.sh http://localhost:8001        # curl suite against a running API
+```
+
+```bash
+cd frontend && BASE_URL=http://127.0.0.1:3000 node tests/e2e/smoke.js   # browser smoke on the web build
+```
+
+```bash
 python3 tools/generate_audio.py
 ```
 

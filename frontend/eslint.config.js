@@ -8,7 +8,7 @@ module.exports = defineConfig([
     ignores: ['dist/*'],
   },
   {
-    files: ['scripts/**/*.js'],
-    languageOptions: { globals: { __dirname: 'readonly', require: 'readonly', console: 'readonly' } },
+    files: ['scripts/**/*.js', 'tests/e2e/**/*.js'],
+    languageOptions: { globals: { __dirname: 'readonly', require: 'readonly', console: 'readonly', process: 'readonly', localStorage: 'readonly', document: 'readonly', window: 'readonly' } },
   },
 ]);
