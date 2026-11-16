@@ -25,7 +25,8 @@ Run lint and typecheck before declaring any task done.
 
 ## Navigation & Routing
 
-- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
+- Use **Expo Router** for all navigation. Routes live in `app/` (project root) — every file there is a screen, `_layout.tsx` files define navigators. Non-route code lives in `src/` (imported as `@/src/...`).
+- Game simulation is pure TypeScript in `src/game/engine.ts` (no React). Rendering is `src/game/render.tsx` (one SkPicture per frame). Run `yarn test` after touching game or progression code.
 - Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
 - Docs: https://docs.expo.dev/router/introduction.md
 

@@ -137,7 +137,7 @@ export default function StoryScreen() {
                     <Icon name="lock" size={18} color={colors.muted} />
                     <Heading>Sealed</Heading>
                   </View>
-                  <Caption>Defeat the previous kingdom's boss to break the seal.</Caption>
+                  <Caption>Defeat the previous kingdom’s boss to break the seal.</Caption>
                 </View>
               )}
             </View>

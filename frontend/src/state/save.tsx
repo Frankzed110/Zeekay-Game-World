@@ -4,6 +4,7 @@
 // - On start: pull cloud save and merge by updated_at (newer wins).
 
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useLatest } from "@/src/utils/use-latest";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AppState } from "react-native";
 
@@ -99,8 +100,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
     },
     onError: () => setSyncStatus("offline"),
   });
-  const pushRef = useRef(push.mutate);
-  pushRef.current = push.mutate;
+  const pushRef = useLatest(push.mutate);
 
   // Register once we have a key
   const registerMutate = register.mutate;
@@ -113,7 +113,6 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
     if (mergedCloud.current) return;
     if (pull.isError) {
       mergedCloud.current = true;
-      setSyncStatus("offline");
       return;
     }
     if (!pull.data) return;
@@ -128,7 +127,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
     } else if (playerKey) {
       pushRef.current(saveRef.current); // local is newer (or cloud empty) → push
     }
-  }, [pull.data, pull.isError, playerKey]);
+  }, [pull.data, pull.isError, playerKey, pushRef]);
 
   const flush = useCallback(() => {
     if (pushTimer.current) {
@@ -136,7 +135,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
       pushTimer.current = null;
     }
     if (backend && playerKey && dirty.current) pushRef.current(saveRef.current);
-  }, [backend, playerKey]);
+  }, [backend, playerKey, pushRef]);
 
   const schedulePush = useCallback(() => {
     dirty.current = true;
@@ -192,8 +191,8 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   }, [flush]);
 
   const value = useMemo<SaveContextValue>(
-    () => ({ save, ready, playerKey, update, replace, syncStatus: backend ? syncStatus : "local", lastSynced, syncNow }),
-    [save, ready, playerKey, update, replace, syncStatus, lastSynced, syncNow, backend],
+    () => ({ save, ready, playerKey, update, replace, syncStatus: !backend ? "local" : pull.isError && syncStatus === "local" ? "offline" : syncStatus, lastSynced, syncNow }),
+    [save, ready, playerKey, update, replace, syncStatus, lastSynced, syncNow, backend, pull.isError],
   );
 
   return <SaveContext.Provider value={value}>{children}</SaveContext.Provider>;

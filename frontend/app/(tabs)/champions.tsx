@@ -49,7 +49,7 @@ export default function ChampionsScreen() {
       <View style={{ gap: 4 }}>
         <Label>Hall of Champions</Label>
         <Title>Legends of the Arena</Title>
-        <Body>Hall ranking sums each archer's best score across all four arena modes.</Body>
+        <Body>Hall ranking sums each archer’s best score across all four arena modes.</Body>
       </View>
 
       {!api.hasBackend() ? (
@@ -57,7 +57,7 @@ export default function ChampionsScreen() {
       ) : q.isLoading ? (
         <LoadingRows testID="champions-loading" rows={5} />
       ) : q.isError ? (
-        <EmptyState testID="champions-error" icon="alert-circle-outline" title="Couldn't reach the Hall" body="Check your connection and try again." action={<Button variant="secondary" label="Retry" icon="refresh" testID="champions-retry-button" onPress={() => q.refetch()} />} />
+        <EmptyState testID="champions-error" icon="alert-circle-outline" title="Couldn’t reach the Hall" body="Check your connection and try again." action={<Button variant="secondary" label="Retry" icon="refresh" testID="champions-retry-button" onPress={() => q.refetch()} />} />
       ) : (
         <>
           {podium.length > 0 ? (

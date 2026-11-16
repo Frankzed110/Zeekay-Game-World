@@ -18,6 +18,8 @@ import { ABILITIES, ELEMENTS } from "@/src/game/rpg";
 import type { Element, HudSnapshot } from "@/src/game/types";
 import { fonts, radius, space, useTheme } from "@/src/theme";
 
+import { useLatest } from "@/src/utils/use-latest";
+
 import { Icon } from "./icon";
 
 const ELEMENT_ICON: Record<Element, string> = { normal: "arrow-up-bold", fire: "fire", ice: "snowflake", storm: "lightning-bolt", toxin: "biohazard" };
@@ -43,12 +45,9 @@ export function CombatCanvas({
   onFrame?: (dt: number) => void;
 }) {
   const [pic, setPic] = useState<SkPicture | null>(null);
-  const pausedRef = useRef(paused);
-  pausedRef.current = paused;
-  const fontsRef = useRef(skFonts);
-  fontsRef.current = skFonts;
-  const onFrameRef = useRef(onFrame);
-  onFrameRef.current = onFrame;
+  const pausedRef = useLatest(paused);
+  const fontsRef = useLatest(skFonts);
+  const onFrameRef = useLatest(onFrame);
 
   useEffect(() => {
     if (!width || !height) return;
@@ -68,7 +67,7 @@ export function CombatCanvas({
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [engine, width, height, trajectorySteps]);
+  }, [engine, width, height, trajectorySteps, pausedRef, fontsRef, onFrameRef]);
 
   return <SkiaPictureView picture={pic} style={{ width, height }} testID="combat-canvas" />;
 }
@@ -78,8 +77,7 @@ export function CombatCanvas({
 
 /** Full-screen slingshot: touch down = draw, drag = aim, release = loose. */
 export function AimSurface({ engine, style, disabled }: { engine: Engine; style: StyleProp<ViewStyle>; disabled: boolean }) {
-  const disabledRef = useRef(disabled);
-  disabledRef.current = disabled;
+  const disabledRef = useLatest(disabled);
   const pan = usePanGesture({
     runOnJS: true,
     minDistance: 0,
@@ -106,10 +104,8 @@ export function AimSurface({ engine, style, disabled }: { engine: Engine; style:
 
 /** Press-and-hold pad (movement) or instant-press button (abilities). */
 export function HoldPad({ onDown, onUp, children, style, testID, label }: { onDown: () => void; onUp?: () => void; children: React.ReactNode; style: StyleProp<ViewStyle>; testID: string; label: string }) {
-  const downRef = useRef(onDown);
-  downRef.current = onDown;
-  const upRef = useRef(onUp);
-  upRef.current = onUp;
+  const downRef = useLatest(onDown);
+  const upRef = useLatest(onUp);
   const [pressed, setPressed] = useState(false);
   const g = usePanGesture({
     runOnJS: true,
@@ -136,8 +132,7 @@ export function HoldPad({ onDown, onUp, children, style, testID, label }: { onDo
 // Keyboard (web) — controller-ready action map
 
 export function useKeyboardControls(engine: Engine, opts: { onPause: () => void; onCycleElement: () => void; enabled: boolean }) {
-  const optsRef = useRef(opts);
-  optsRef.current = opts;
+  const optsRef = useLatest(opts);
   const held = useRef(new Set<string>());
 
   useEffect(() => {
@@ -181,7 +176,7 @@ export function useKeyboardControls(engine: Engine, opts: { onPause: () => void;
       window.removeEventListener("keyup", up);
       window.removeEventListener("blur", blur);
     };
-  }, [engine]);
+  }, [engine, optsRef]);
 
   /** Continuous aim from held keys; call every frame. */
   return (dt: number) => {

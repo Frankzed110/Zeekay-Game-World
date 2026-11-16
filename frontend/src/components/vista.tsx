@@ -10,10 +10,11 @@ import type { BiomeId } from "@/src/game/types";
 export function Vista({ biome, style, testID, animate = true }: { biome: BiomeId; style?: StyleProp<ViewStyle>; testID?: string; animate?: boolean }) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [pic, setPic] = useState<SkPicture | null>(null);
-  const start = useRef(Date.now());
+  const start = useRef(0);
 
   useEffect(() => {
     if (!size.w || !size.h) return;
+    if (!start.current) start.current = Date.now();
     let raf = 0;
     let last = 0;
     const loop = (ts: number) => {

@@ -30,7 +30,11 @@ export function computeView(W: number, H: number): View {
   const scale = Math.max(0.1, Math.min(W / 1100, H / 1000));
   const visibleW = W / scale;
   const visibleH = H / scale;
-  return { scale, visibleW, visibleH, offsetY: visibleH - WORLD_H, W, H };
+  // Keep a band below the ground for on-screen controls (pads / ability buttons) so they
+  // never cover fighters' feet: the ground line sits ~14% (min 84px) above the bottom edge.
+  const groundPx = Math.max(84, Math.min(130, H * 0.14));
+  const offsetY = (H - groundPx) / scale - GROUND_Y;
+  return { scale, visibleW, visibleH, offsetY, W, H };
 }
 
 export function screenToWorld(view: View, camX: number, sx: number, sy: number) {
@@ -220,7 +224,7 @@ function drawMidProps(canvas: SkCanvas, biome: BiomeId, camX: number, visibleW: 
 function drawGround(canvas: SkCanvas, pal: BiomePalette, camX: number, visibleW: number, biome: BiomeId) {
   const p = fill(pal.ground);
   p.setShader(Skia.Shader.MakeLinearGradient({ x: 0, y: GROUND_Y }, { x: 0, y: WORLD_H + 120 }, [col(pal.groundTop), col(pal.ground)], [0, 0.35], TileMode.Clamp));
-  canvas.drawRect(rect(camX - 100, GROUND_Y, visibleW + 200, WORLD_H + 400 - GROUND_Y), p);
+  canvas.drawRect(rect(camX - 100, GROUND_Y, visibleW + 200, 2000), p);
   canvas.drawRect(rect(camX - 100, GROUND_Y - 3, visibleW + 200, 7), fill(pal.crust));
   // tufts / rocks
   const step = 46;

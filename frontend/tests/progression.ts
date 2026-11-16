@@ -1,9 +1,10 @@
 /** Progression rules: rewards, unlocks, tournament flow, cloud merge. Run: yarn test:progression */
-declare const process: { exit(code: number): never };
 import { getMission } from "../src/game/missions";
 import { xpForLevel } from "../src/game/rpg";
 import type { EngineResult } from "../src/game/types";
 import { applyMissionResult, defaultSave, normalizeSave, pickNewer, stageUnlocked, nextStoryStage } from "../src/state/progression";
+
+declare const process: { exit(code: number): never };
 
 let fails = 0;
 const ok = (c: unknown, m: string) => { console.log(c ? "ok  " : "FAIL", m); if (!c) fails++; };

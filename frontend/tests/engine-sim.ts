@@ -1,5 +1,4 @@
 /**
-declare const process: { exit(code: number): never };
  * Headless engine simulation: an aim-bot plays every mission and we assert each is winnable
  * and the core systems (wind, ragdolls, cages, barrels, scoring, stars) behave.
  * Run: yarn test:engine
@@ -8,6 +7,8 @@ import { Engine, G, GROUND_Y, solveLaunchAngle } from "../src/game/engine";
 import { ALL_STAGES } from "../src/game/missions";
 import { buildLoadout } from "../src/game/rpg";
 import type { Difficulty, StageDef } from "../src/game/types";
+
+declare const process: { exit(code: number): never };
 
 function makeEngine(stage: StageDef, level: number, difficulty: Difficulty = "normal", seed = 7) {
   const player = buildLoadout({

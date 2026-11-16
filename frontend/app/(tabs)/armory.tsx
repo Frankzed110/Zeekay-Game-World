@@ -26,7 +26,7 @@ import {
 import { drillStars, loadoutFromSave, type SaveData } from "@/src/state/progression";
 import { useSave } from "@/src/state/save";
 import { audio } from "@/src/game/audio";
-import { makeStyles, radius, space, useTheme } from "@/src/theme";
+import { makeStyles, space, useTheme } from "@/src/theme";
 
 type Tab = "stats" | "bows" | "armor" | "craft" | "mastery";
 
