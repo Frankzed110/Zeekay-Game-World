@@ -134,6 +134,29 @@ async def post_score(input: ScoreIn):
     return {"ok": True, "rank": len(better_players) + 1, "best": my_best}
 
 
+async def current_names(keys: List[str]) -> Dict[str, str]:
+    """Display names come from `players` so renames show everywhere, not only on new bests."""
+    if not keys:
+        return {}
+    docs = await db.players.find({"player_key": {"$in": keys}}, {"player_key": 1, "display_name": 1}).to_list(len(keys))
+    return {d["player_key"]: d.get("display_name") or "Archer" for d in docs}
+
+
+async def best_per_player(mode: str) -> Dict[str, int]:
+    rows = await db.scores.aggregate([
+        {"$match": {"mode": mode}},
+        {"$group": {"_id": "$player_key", "best": {"$max": "$score"}}},
+    ]).to_list(None)
+    return {r["_id"]: int(r["best"]) for r in rows}
+
+
+def rank_of(scores: Dict[str, int], key: str) -> Optional[Dict[str, int]]:
+    if key not in scores:
+        return None
+    mine = scores[key]
+    return {"rank": sum(1 for v in scores.values() if v > mine) + 1, "best": mine}
+
+
 @api_router.get("/leaderboard")
 async def leaderboard(mode: str = Query(..., pattern=MODE_PATTERN), limit: int = Query(50, ge=1, le=100)):
     docs = await db.scores.find({"mode": mode}).sort("score", -1).limit(400).to_list(400)
@@ -150,13 +173,15 @@ async def leaderboard(mode: str = Query(..., pattern=MODE_PATTERN), limit: int =
                 "arena_id": d.get("arena_id", ""),
             }
     entries = sorted(seen.values(), key=lambda e: e["score"], reverse=True)[:limit]
+    names = await current_names([e["player_key"] for e in entries])
     for i, e in enumerate(entries):
         e["rank"] = i + 1
+        e["display_name"] = names.get(e["player_key"], e["display_name"])
     return {"mode": mode, "entries": entries}
 
 
 @api_router.get("/champions")
-async def champions():
+async def champions(player_key: Optional[str] = Query(None, max_length=64)):
     modes = ["arena_duel", "arena_survival", "arena_tournament", "arena_coop"]
     by_mode: Dict[str, List[Dict[str, Any]]] = {}
     totals: Dict[str, Dict[str, Any]] = {}
@@ -186,7 +211,21 @@ async def champions():
     hall = sorted(totals.values(), key=lambda e: e["score"], reverse=True)[:10]
     for i, e in enumerate(hall):
         e["rank"] = i + 1
-    return {"by_mode": by_mode, "hall": hall}
+    names = await current_names(list({e["player_key"] for e in hall} | {e["player_key"] for lst in by_mode.values() for e in lst}))
+    for e in hall + [e for lst in by_mode.values() for e in lst]:
+        e["display_name"] = names.get(e["player_key"], e["display_name"])
+    me: Optional[Dict[str, Any]] = None
+    if player_key:
+        # Own rank even when outside the top 10 (full best-per-player scan; fine at v1 scale).
+        bests = {mode: await best_per_player(mode) for mode in modes}
+        me = {"by_mode": {mode: rank_of(bests[mode], player_key) for mode in modes}, "hall": None}
+        hall_totals: Dict[str, int] = {}
+        for mode in modes:
+            for k, v in bests[mode].items():
+                hall_totals[k] = hall_totals.get(k, 0) + v
+        if player_key in hall_totals:
+            me["hall"] = rank_of(hall_totals, player_key)
+    return {"by_mode": by_mode, "hall": hall, "me": me}
 
 
 @api_router.get("/")

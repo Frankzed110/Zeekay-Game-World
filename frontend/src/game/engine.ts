@@ -2135,6 +2135,13 @@ export class Engine {
       }
       if (secret) lines.push({ label: "Secret objective", value: 500 });
       score = Math.max(0, lines.reduce((a, l) => a + l.value, 0));
+      if (s.type === "coop" && !victory) {
+        // Lost co-op runs score like a lost duel: damage dealt to the boss, capped at 300.
+        const bossPct = this.boss ? Math.max(0, this.boss.hp) / this.boss.maxHp : 1;
+        score = Math.round((1 - bossPct) * 300);
+        lines.length = 0;
+        lines.push({ label: "Damage dealt to boss", value: score });
+      }
       let second = false;
       if (s.type === "rescue") second = this.hostagesLost === 0;
       else if (s.type === "defense") second = gatePct >= 50;
@@ -2142,6 +2149,13 @@ export class Engine {
       stars = [victory, victory && second, victory && secret];
     }
 
+    // Arena boards are shared across difficulties: scale every non-survival arena score
+    // by the difficulty multiplier (survival already includes it).
+    if (s.scoreMode && s.type !== "survival" && score > 0 && this.diffMult !== 1) {
+      const scaled = Math.round(score * this.diffMult);
+      lines.push({ label: `Difficulty ×${this.diffMult}`, value: scaled - score });
+      score = scaled;
+    }
     return {
       victory,
       score,
@@ -2176,21 +2190,21 @@ export class Engine {
         progress = `${enemiesLeft} foe${enemiesLeft === 1 ? "" : "s"} left`;
         break;
       case "rescue":
-        progress = `${this.hostagesSaved}/${this.hostages.length} saved · ${enemiesLeft} foes`;
+        progress = `${this.hostagesSaved}/${this.hostages.length} saved · ${enemiesLeft} ${enemiesLeft === 1 ? "foe" : "foes"}`;
         break;
       case "escort":
         progress = this.escort ? `${Math.round((this.escort.x / (this.worldW - 220)) * 100)}% of the way` : "";
         break;
       case "defense":
       case "waves":
-        progress = `Wave ${this.waveIndex}/${s.groups.length} · ${enemiesLeft} foes`;
+        progress = `Wave ${this.waveIndex}/${s.groups.length} · ${enemiesLeft} ${enemiesLeft === 1 ? "foe" : "foes"}`;
         break;
       case "survival":
         progress = `Wave ${this.survivalWave} · ${this.kills} kills`;
         break;
       case "boss":
       case "coop":
-        progress = `${enemiesLeft} foes`;
+        progress = `${enemiesLeft} ${enemiesLeft === 1 ? "foe" : "foes"}`;
         break;
       case "training":
         progress = s.drill === "guard" ? `${this.dummiesBroken}/3 broken · ${this.shots} arrows` : `${this.bellsRung}/3 bells · ${this.shots} arrows`;

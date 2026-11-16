@@ -160,7 +160,11 @@ export function useKeyboardControls(engine: Engine, opts: { onPause: () => void;
     const up = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
       held.current.delete(k);
-      if (k === " ") engine.releaseDraw();
+      if (k === " ") {
+        // Never loose an arrow while paused / in a modal — just drop the draw.
+        if (optsRef.current.enabled) engine.releaseDraw();
+        else engine.cancelDraw();
+      }
       else if (k === "a" || k === "d" || k === "arrowleft" || k === "arrowright") updateMove();
     };
     const blur = () => {

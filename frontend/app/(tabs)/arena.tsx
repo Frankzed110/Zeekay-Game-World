@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { router } from "expo-router";
-import React from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -21,7 +21,7 @@ const useStyles = makeStyles((c) => ({
   modeIcon: { width: 48, height: 48, borderRadius: radius.md, backgroundColor: c.brandTertiary, alignItems: "center", justifyContent: "center" },
   topRow: { flexDirection: "row", justifyContent: "space-between", gap: space.sm },
   bracket: { flexDirection: "row", gap: space.sm },
-  round: { flex: 1, padding: space.sm, borderRadius: radius.md, borderWidth: 1, gap: 2 },
+  round: { flex: 1, minWidth: 0, paddingVertical: space.sm, paddingHorizontal: 6, borderRadius: radius.md, borderWidth: 1, gap: 2 },
   drill: { flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: space.sm },
 }));
 
@@ -30,7 +30,14 @@ export default function ArenaScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { save } = useSave();
-  const champs = useQuery({ queryKey: ["champions"], queryFn: api.champions, enabled: api.hasBackend() });
+  const { playerKey } = useSave();
+  const champs = useQuery({ queryKey: ["champions", playerKey], queryFn: () => api.champions(playerKey), enabled: api.hasBackend() });
+  const refetch = champs.refetch;
+  useFocusEffect(
+    useCallback(() => {
+      if (api.hasBackend()) void refetch();
+    }, [refetch]),
+  );
   const rank = masteryRank(drillStars(save), save.profile.level);
   const round = save.progress.tournament.round;
 
@@ -65,11 +72,13 @@ export default function ArenaScreen() {
                 <View style={s.bracket} testID="arena-tournament-bracket">
                   {TOURNAMENT_ROUNDS.map((r, i) => (
                     <View key={r.round} style={[s.round, { borderColor: i === round ? colors.brand : colors.border, backgroundColor: i < round ? colors.brandTertiary : "transparent" }]}>
-                      <Caption>{r.round}</Caption>
-                      <Body color={colors.onSurface} numberOfLines={1}>
+                      <Caption numberOfLines={1}>
                         {i < round ? "✓ " : ""}
+                        {["QF", "SF", "Final"][i]}
+                      </Caption>
+                      <Caption color={colors.onSurface} numberOfLines={2}>
                         {r.champion}
-                      </Body>
+                      </Caption>
                     </View>
                   ))}
                 </View>

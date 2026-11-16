@@ -87,3 +87,20 @@ def test_validation(client):
     bad = client.post("/api/scores", json={"player_key": KEY_A, "mode": "DROP TABLE", "score": 5})
     assert bad.status_code == 422
     assert client.get("/api/leaderboard").status_code == 422
+
+
+def test_names_follow_rename_and_me_rank(client):
+    def post(key, name, score, mode="arena_duel"):
+        return client.post("/api/scores", json={"player_key": key, "display_name": name, "mode": mode, "score": score}).json()
+
+    for i in range(12):
+        post(f"zzzzzzzz-{i:04d}", f"P{i}", 1000 + i)
+    post(KEY_A, "Old", 50)
+    client.post("/api/players/register", json={"player_key": KEY_A, "display_name": "New"})
+    lb = client.get("/api/leaderboard", params={"mode": "arena_duel"}).json()
+    assert [e for e in lb["entries"] if e["player_key"] == KEY_A][0]["display_name"] == "New"
+    ch = client.get("/api/champions", params={"player_key": KEY_A}).json()
+    assert ch["me"]["by_mode"]["arena_duel"] == {"rank": 13, "best": 50}
+    assert ch["me"]["hall"]["rank"] == 13
+    assert ch["me"]["by_mode"]["arena_coop"] is None
+    assert client.get("/api/champions").json()["me"] is None

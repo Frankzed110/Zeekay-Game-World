@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import React, { useState } from "react";
+import { useFocusEffect } from "expo-router";
+import React, { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, type LeaderEntry } from "@/src/api/client";
 import { Icon } from "@/src/components/icon";
-import { Body, Button, Caption, Card, EmptyState, Heading, Label, LoadingRows, Segmented, Title } from "@/src/components/ui";
+import { Body, Button, Caption, Card, EmptyState, Heading, IconButton, Label, LoadingRows, Segmented, Title } from "@/src/components/ui";
 import { MODE_LABEL } from "@/src/game/missions";
 import type { ScoreMode } from "@/src/game/types";
 import { useSave } from "@/src/state/save";
@@ -32,10 +33,16 @@ export default function ChampionsScreen() {
   const insets = useSafeAreaInsets();
   const { playerKey, save } = useSave();
   const [tab, setTab] = useState<Tab>("hall");
-  const q = useQuery({ queryKey: ["champions"], queryFn: api.champions, enabled: api.hasBackend() });
+  const q = useQuery({ queryKey: ["champions", playerKey], queryFn: () => api.champions(playerKey), enabled: api.hasBackend() });
+  const refetch = q.refetch;
+  useFocusEffect(
+    useCallback(() => {
+      if (api.hasBackend()) void refetch();
+    }, [refetch]),
+  );
 
   const list: LeaderEntry[] = q.data ? (tab === "hall" ? q.data.hall : q.data.by_mode[tab] ?? []) : [];
-  const mine = list.find((e) => e.player_key === playerKey);
+  const mine = q.data?.me ? (tab === "hall" ? q.data.me.hall : q.data.me.by_mode[tab]) : null;
   const podium = q.data?.hall.slice(0, 3) ?? [];
   const order = [1, 0, 2]; // 2nd, 1st, 3rd
 
@@ -47,7 +54,10 @@ export default function ChampionsScreen() {
       contentContainerStyle={{ paddingTop: insets.top + space.lg, paddingBottom: insets.bottom + space.xl, paddingHorizontal: space.lg, gap: space.lg, maxWidth: 800, width: "100%", alignSelf: "center" }}
     >
       <View style={{ gap: 4 }}>
-        <Label>Hall of Champions</Label>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <Label>Hall of Champions</Label>
+          {api.hasBackend() ? <IconButton icon="refresh" label="Refresh leaderboards" testID="champions-refresh-button" onPress={() => void q.refetch()} /> : null}
+        </View>
         <Title>Legends of the Arena</Title>
         <Body>Hall ranking sums each archer’s best score across all four arena modes.</Body>
       </View>
@@ -92,7 +102,7 @@ export default function ChampionsScreen() {
             <Icon name="account" size={22} color={colors.brand} />
             <View style={{ flex: 1 }}>
               <Caption>{save.profile.name}</Caption>
-              <Heading>{mine ? `Rank #${mine.rank} · ${mine.score.toLocaleString()}` : "Not ranked yet — enter the arena!"}</Heading>
+              <Heading testID="champions-my-rank-text">{mine ? `Rank #${mine.rank} · ${mine.best.toLocaleString()}` : "Not ranked yet — enter the arena!"}</Heading>
             </View>
           </Card>
 

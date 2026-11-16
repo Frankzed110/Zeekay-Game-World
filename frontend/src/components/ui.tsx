@@ -133,9 +133,22 @@ export function IconButton({ icon, onPress, testID, label, size = 22, tone }: { 
 // ---------------------------------------------------------------------------
 // Chip
 
+/** Relative luminance check so selected chips pick readable text on light accents. */
+export function isLightColor(hex: string): boolean {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return false;
+  const n = parseInt(m[1], 16);
+  const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2] > 0.45;
+}
+
 export function Chip({ label, selected, onPress, testID, icon, color, disabled }: { label: string; selected?: boolean; onPress?: () => void; testID: string; icon?: string; color?: string; disabled?: boolean }) {
   const { colors } = useTheme();
   const accent = color ?? colors.brand;
+  const onAccent = isLightColor(accent) ? colors.onSurfaceInverse : colors.onBrand;
   return (
     <Pressable
       testID={testID}
@@ -160,8 +173,8 @@ export function Chip({ label, selected, onPress, testID, icon, color, disabled }
         opacity: disabled ? 0.45 : pressed ? 0.8 : 1,
       })}
     >
-      {icon ? <Icon name={icon} size={16} color={selected ? colors.onBrand : accent} /> : null}
-      <Text style={{ fontFamily: fonts.bodySemi, fontSize: 13, color: selected ? colors.onBrand : colors.onSurfaceSecondary }}>{label}</Text>
+      {icon ? <Icon name={icon} size={16} color={selected ? onAccent : accent} /> : null}
+      <Text style={{ fontFamily: fonts.bodySemi, fontSize: 13, color: selected ? onAccent : colors.onSurfaceSecondary }}>{label}</Text>
     </Pressable>
   );
 }
@@ -312,7 +325,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastCtx.Provider value={show}>
       {children}
-      <View pointerEvents="none" style={{ position: "absolute", left: space.lg, right: space.lg, top: insets.top + space.sm, gap: space.sm, alignItems: "flex-start" }}>
+      <View pointerEvents="none" style={{ position: "absolute", left: space.lg, right: space.lg, bottom: insets.bottom + 84, gap: space.sm, alignItems: "center" }}>
         {items.map((t) => (
           <View
             key={t.id}

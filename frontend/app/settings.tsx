@@ -11,7 +11,7 @@ import { fonts, makeStyles, radius, space, TOUCH, useTheme } from "@/src/theme";
 
 const useStyles = makeStyles((c) => ({
   root: { flex: 1, backgroundColor: c.surface },
-  content: { gap: space.lg, maxWidth: 720, width: "100%" },
+  content: { gap: space.lg, maxWidth: 720, width: "100%", alignSelf: "center" },
   header: { flexDirection: "row", alignItems: "center", gap: space.md },
   input: { minHeight: TOUCH, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, backgroundColor: c.surfaceTertiary, color: c.onSurface, paddingHorizontal: space.md, fontFamily: fonts.bodySemi, fontSize: 16 },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: TOUCH, gap: space.md },

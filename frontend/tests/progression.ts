@@ -48,6 +48,14 @@ const a = { ...defaultSave(), updated_at: "2026-01-01T00:00:00Z" };
 const b = { ...defaultSave("Cloud"), updated_at: "2026-02-01T00:00:00Z" };
 ok(pickNewer(a, b).profile.name === "Cloud" && pickNewer(b, a).profile.name === "Cloud", "cloud merge: newer wins");
 ok(normalizeSave({ profile: { level: 5 } }).inventory.bows.includes("hunter_shortbow"), "partial saves normalize safely");
+// Regression: replaying a won round is practice — bracket and total unchanged, no submit
 t = defaultSave();
+let q = applyMissionResult(t, getMission("arena_tournament-1")!, res({ score: 900 }), "normal", 0, rnd);
+q = applyMissionResult(q.save, getMission("arena_tournament-1")!, res({ score: 900 }), "normal", 0, rnd);
+ok(q.save.progress.tournament.round === 1 && q.save.progress.tournament.score === 900 && q.rewards.tournament?.practice && q.submit === null, "replaying a won tournament round is practice only");
+ok(!stageUnlocked(q.save, "arena_tournament-3") && stageUnlocked(q.save, "arena_tournament-2"), "only the current tournament round is unlocked");
+// Regression: a defeat never sets a stage best / NEW BEST
+const lost = applyMissionResult(defaultSave(), getMission("vale-1")!, res({ victory: false, score: 400, stars: [false, false, false] }), "normal", 0, rnd);
+ok(!lost.rewards.newBest && (lost.save.progress.stages["vale-1"]?.best ?? 0) === 0, "defeat does not record a stage best");
 console.log(fails ? `${fails} FAILURE(S)` : "ALL PASS");
 process.exit(fails ? 1 : 0);

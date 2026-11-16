@@ -1,6 +1,6 @@
 "use no memo";
 import { useFont } from "@shopify/react-native-skia";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, View, type LayoutChangeEvent } from "react-native";
@@ -62,6 +62,12 @@ function CombatRun({ stage, onRetry }: { stage: StageDef; onRetry: () => void })
   const setElement = useCallback((el: Element) => engine.setElement(el), [engine]);
 
   const blocked = paused || tutorial || !!outcome;
+  useEffect(() => {
+    if (blocked) {
+      engine.cancelDraw();
+      engine.setMove(0);
+    }
+  }, [blocked, engine]);
   const keyAim = useKeyboardControls(engine, { onPause: () => setPaused((p) => !p), onCycleElement: cycleElement, enabled: !blocked });
 
   // Music per kingdom / boss
@@ -79,7 +85,11 @@ function CombatRun({ stage, onRetry }: { stage: StageDef; onRetry: () => void })
   }, []);
 
   // Results: apply progression once, shortly after the mission ends
-  const submit = useMutation({ mutationFn: api.submitScore });
+  const queryClient = useQueryClient();
+  const submit = useMutation({
+    mutationFn: api.submitScore,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["champions"] }),
+  });
   const submitMutate = submit.mutate;
   useEffect(() => {
     if (!hud.over || applied.current || engine.overT < 1.2 || !engine.result) return;
@@ -103,6 +113,7 @@ function CombatRun({ stage, onRetry }: { stage: StageDef; onRetry: () => void })
     setPaused(false);
     router.replace({ pathname: "/mission/[stageId]", params: { stageId: stage.id } });
   };
+
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }} onLayout={onLayout} testID="combat-screen">
@@ -191,17 +202,19 @@ function Results({
   const accuracy = r.shots ? Math.round((Math.min(r.hits, r.shots) / r.shots) * 100) : 0;
 
   const primary = () => {
-    if (tour && !tour.finished && tour.nextRound !== null) {
+    if (tour?.practice) {
+      router.dismissTo("/(tabs)/arena");
+    } else if (tour && !tour.finished && tour.nextRound !== null) {
       router.replace({ pathname: "/combat/[stageId]", params: { stageId: `arena_tournament-${tour.nextRound + 1}` } });
     } else if (rw.unlockedStage) {
       router.replace({ pathname: "/mission/[stageId]", params: { stageId: rw.unlockedStage } });
     } else if (next && stage.kingdom !== "arena" && stage.kingdom !== "training") {
       router.replace({ pathname: "/mission/[stageId]", params: { stageId: next } });
     } else {
-      router.replace(stage.kingdom === "arena" || stage.kingdom === "training" ? "/(tabs)/arena" : "/(tabs)/story");
+      router.dismissTo(stage.kingdom === "arena" || stage.kingdom === "training" ? "/(tabs)/arena" : "/(tabs)/story");
     }
   };
-  const primaryLabel = tour && !tour.finished ? `Next: ${TOURNAMENT_ROUNDS[tour.nextRound ?? 0].round}` : rw.unlockedStage || next ? "Continue" : stage.kingdom === "arena" || stage.kingdom === "training" ? "Back to Arena" : "Back to Map";
+  const primaryLabel = tour?.practice ? "Back to Arena" : tour && !tour.finished ? `Next: ${TOURNAMENT_ROUNDS[tour.nextRound ?? 0].round}` : rw.unlockedStage || next ? "Continue" : stage.kingdom === "arena" || stage.kingdom === "training" ? "Back to Arena" : "Back to Map";
 
   return (
     <Sheet visible onClose={() => {}} dismissable={false} testID="results-modal">
@@ -218,7 +231,7 @@ function Results({
         </View>
       ) : null}
       {tour ? (
-        <Body testID="results-tournament">{tour.finished ? (tour.won ? `🏆 Tournament champion! Total ${tour.total.toLocaleString()}` : `Eliminated. Tournament total ${tour.total.toLocaleString()}`) : `Round won — ${TOURNAMENT_ROUNDS[tour.nextRound ?? 0].champion} awaits.`}</Body>
+        <Body testID="results-tournament">{tour.practice ? "Practice round — the bracket is unchanged." : tour.finished ? (tour.won ? `🏆 Tournament champion! Total ${tour.total.toLocaleString()}` : `Eliminated. Tournament total ${tour.total.toLocaleString()}`) : `Round won — ${TOURNAMENT_ROUNDS[tour.nextRound ?? 0].champion} awaits.`}</Body>
       ) : null}
 
       <View style={{ gap: 4 }} testID="results-breakdown">
@@ -261,8 +274,8 @@ function Results({
 
       <Button large icon="arrow-right" label={primaryLabel} testID="results-continue-button" onPress={primary} />
       <View style={{ flexDirection: "row", gap: space.sm }}>
-        <Button style={{ flex: 1 }} variant="secondary" icon="refresh" label={tour && !tour.finished ? "Replay round" : "Retry"} testID="results-retry-button" onPress={onRetry} />
-        <Button style={{ flex: 1 }} variant="ghost" icon="map" label="Map" testID="results-map-button" onPress={() => router.replace("/(tabs)/story")} />
+        <Button style={{ flex: 1 }} variant="secondary" icon="refresh" label={tour && !tour.finished && !tour.practice ? "Practice again" : "Retry"} testID="results-retry-button" onPress={onRetry} />
+        <Button style={{ flex: 1 }} variant="ghost" icon="map" label="Map" testID="results-map-button" onPress={() => router.dismissTo("/(tabs)/story")} />
       </View>
     </Sheet>
   );

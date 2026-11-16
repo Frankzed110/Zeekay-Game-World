@@ -101,9 +101,17 @@ export function loadoutFromSave(s: SaveData): PlayerLoadout {
   });
 }
 
+/** 0-based tournament round for `arena_tournament-N` stage ids, else null. */
+export function tournamentIndex(stageId: string): number | null {
+  const m = /^arena_tournament-(\d+)$/.exec(stageId);
+  return m ? Number(m[1]) - 1 : null;
+}
+
 export function stageUnlocked(s: SaveData, stageId: string): boolean {
   const stage = getMission(stageId);
   if (!stage) return false;
+  const tIdx = tournamentIndex(stage.id);
+  if (tIdx !== null) return tIdx === s.progress.tournament.round;
   if (stage.kingdom === "arena" || stage.kingdom === "training") return true;
   const k = kingdomOf(stageId);
   if (!k || k.index > s.progress.kingdomsUnlocked) return false;
@@ -145,7 +153,7 @@ export interface Rewards {
   unlockedStage: string | null;
   unlockedKingdom: string | null;
   secretFirstTime: boolean;
-  tournament: { finished: boolean; won: boolean; nextRound: number | null; total: number } | null;
+  tournament: { finished: boolean; won: boolean; nextRound: number | null; total: number; practice: boolean } | null;
 }
 
 export interface ScoreSubmission {
@@ -220,10 +228,10 @@ export function applyMissionResult(prev: SaveData, stage: StageDef, r: EngineRes
     const before = s.progress.stages[stage.id] ?? { stars: 0, best: 0, secretDone: false };
     const stars = r.stars.filter(Boolean).length;
     starsEarned = stars;
-    newBest = r.score > before.best;
+    newBest = r.victory && r.score > before.best;
     secretFirstTime = r.secretDone && !before.secretDone;
     const wasCleared = before.stars > 0;
-    s.progress.stages[stage.id] = { stars: Math.max(before.stars, stars), best: Math.max(before.best, r.score), secretDone: before.secretDone || r.secretDone };
+    s.progress.stages[stage.id] = { stars: Math.max(before.stars, stars), best: r.victory ? Math.max(before.best, r.score) : before.best, secretDone: before.secretDone || r.secretDone };
     if (r.victory && !wasCleared) {
       const i = k.stages.indexOf(stage.id);
       if (i < k.stages.length - 1) unlockedStage = k.stages[i + 1];
@@ -251,16 +259,22 @@ export function applyMissionResult(prev: SaveData, stage: StageDef, r: EngineRes
     const mode = stage.scoreMode;
     if (mode === "arena_tournament") {
       const t = s.progress.tournament;
-      const total = t.score + r.score;
-      if (r.victory && t.round < TOURNAMENT_ROUNDS.length - 1) {
-        s.progress.tournament = { round: t.round + 1, score: total };
-        tournament = { finished: false, won: false, nextRound: t.round + 1, total };
+      const played = tournamentIndex(stage.id) ?? t.round;
+      if (played !== t.round) {
+        // Replaying a round that is not the current bracket round = practice: no progress, no submit.
+        tournament = { finished: false, won: r.victory, nextRound: t.round, total: t.score, practice: true };
       } else {
-        const won = r.victory;
-        if (won) s.stats.arenasWon += 1;
-        s.progress.tournament = { round: 0, score: 0 };
-        tournament = { finished: true, won, nextRound: null, total };
-        submit = { mode, arena_id: stage.id, score: total, wave: t.round + 1 };
+        const total = t.score + r.score;
+        if (r.victory && t.round < TOURNAMENT_ROUNDS.length - 1) {
+          s.progress.tournament = { round: t.round + 1, score: total };
+          tournament = { finished: false, won: false, nextRound: t.round + 1, total, practice: false };
+        } else {
+          const won = r.victory;
+          if (won) s.stats.arenasWon += 1;
+          s.progress.tournament = { round: 0, score: 0 };
+          tournament = { finished: true, won, nextRound: null, total, practice: false };
+          submit = { mode, arena_id: "arena_tournament", score: total, wave: t.round + 1 };
+        }
       }
     } else {
       if (r.victory && mode !== "arena_survival") s.stats.arenasWon += 1;

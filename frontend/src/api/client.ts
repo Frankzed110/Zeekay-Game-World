@@ -43,9 +43,15 @@ export interface HallEntry extends LeaderEntry {
   modes: ScoreMode[];
 }
 
+export interface MyRank {
+  rank: number;
+  best: number;
+}
+
 export interface ChampionsResponse {
   by_mode: Record<ScoreMode, LeaderEntry[]>;
   hall: HallEntry[];
+  me: { by_mode: Record<ScoreMode, MyRank | null>; hall: MyRank | null } | null;
 }
 
 export interface ScoreSubmit {
@@ -71,5 +77,5 @@ export const api = {
     request<{ ok: boolean; rank: number; best: number }>("/scores", { method: "POST", body: JSON.stringify({ meta: {}, ...s }) }),
   leaderboard: (mode: ScoreMode, limit = 50) =>
     request<{ mode: string; entries: LeaderEntry[] }>(`/leaderboard?mode=${mode}&limit=${limit}`),
-  champions: () => request<ChampionsResponse>("/champions"),
+  champions: (player_key?: string | null) => request<ChampionsResponse>(`/champions${player_key ? `?player_key=${encodeURIComponent(player_key)}` : ""}`),
 };
