@@ -1,5 +1,7 @@
 # Zeekay Game World
 
+**▶ Play / publish without coding: see [PLAY_AND_DEPLOY.md](PLAY_AND_DEPLOY.md)**
+
 A cross-platform (web · iOS · Android) **2.5D side-view archery action-RPG**. Aim with a slingshot drag,
 read the wind, and loose arrows through four kingdoms of Ardenfall to reunite the shattered Sunshard.
 

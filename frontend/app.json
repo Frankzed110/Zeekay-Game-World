@@ -21,7 +21,14 @@
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "name": "Zeekay Game World",
+      "shortName": "Zeekay",
+      "themeColor": "#121318",
+      "backgroundColor": "#121318",
+      "display": "standalone",
+      "orientation": "landscape",
+      "lang": "en"
     },
     "plugins": [
       "expo-router",
@@ -41,6 +48,7 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "backgroundColor": "#121318"
+    "backgroundColor": "#121318",
+    "description": "Zeekay Game World \u2014 a 2.5D archery action-RPG. Aim, read the wind, and reunite the shattered Sunshard."
   }
 }

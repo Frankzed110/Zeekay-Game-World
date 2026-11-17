@@ -1,0 +1,20 @@
+# Free leaderboard/cloud-save server on Render (https://render.com) — optional.
+# Render → New → Blueprint → pick this repo. When asked, paste your MongoDB Atlas
+# connection string into MONGO_URL. Free instances sleep after ~15 min idle
+# (first request then takes ~1 minute; the game keeps working meanwhile).
+services:
+  - type: web
+    name: zeekay-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: MONGO_URL
+        sync: false
+      - key: DB_NAME
+        value: zeekay_game_world
+      - key: PYTHON_VERSION
+        value: 3.12.7
